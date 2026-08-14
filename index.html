@@ -4,18 +4,26 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AI時代の対応力診断</title>
+<meta name="description" content="2つの質問で、あなたのAI時代への対応タイプがわかります">
 <meta property="og:title" content="AI時代の対応力診断">
-<meta property="og:description" content="2つの質問で、あなたのAI時代への対応タイプがわかります">
+<meta property="og:description" content="2つの質問で、あなたのAI時代への対応タイプと、今週からできる行動がわかります">
 <meta property="og:type" content="website">
+<meta property="og:image" content="https://ai-saizensen.kkimura-174.workers.dev/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230f1117'/%3E%3Crect x='18' y='18' width='28' height='28' rx='6' fill='%236ea8fe'/%3E%3Crect x='54' y='18' width='28' height='28' rx='6' fill='%235eead4'/%3E%3Crect x='18' y='54' width='28' height='28' rx='6' fill='%23fbbf77'/%3E%3Crect x='54' y='54' width='28' height='28' rx='6' fill='%2386efac'/%3E%3C/svg%3E">
 <style>
   :root {
     --bg: #0f1117;
     --card: #171a23;
-    --border: #2a2e3a;
+    --border: #262b38;
     --text: #e8e9ed;
     --text-dim: #9aa0ae;
     --accent: #6ea8fe;
     --accent-text: #0f1117;
+    --t1: #6ea8fe;
+    --t2: #5eead4;
+    --t3: #fbbf77;
+    --t4: #86efac;
   }
   * { box-sizing: border-box; }
   html, body {
@@ -29,34 +37,45 @@
   .wrap {
     max-width: 560px;
     margin: 0 auto;
-    padding: 32px 20px 60px;
+    padding: 0 20px 60px;
     min-height: 100vh;
   }
-  header.top {
-    text-align: center;
-    margin-bottom: 28px;
+  .hero {
+    margin: 0 -20px 28px;
+    overflow: hidden;
   }
-  header.top .eyebrow {
-    font-size: 12px;
-    letter-spacing: 0.15em;
-    color: var(--text-dim);
-    margin-bottom: 8px;
-  }
-  header.top h1 {
-    font-size: 22px;
-    margin: 0;
-    line-height: 1.5;
+  .hero img {
+    width: 100%;
+    display: block;
   }
   .card {
     background: var(--card);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 24px 20px;
+    border-radius: 14px;
+    padding: 26px 22px;
+    animation: fadeIn .35s ease;
   }
-  .progress {
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .progress-track {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width .3s ease;
+  }
+  .progress-label {
     font-size: 12px;
     color: var(--text-dim);
-    margin-bottom: 12px;
+    margin-bottom: 14px;
     letter-spacing: 0.05em;
   }
   .question {
@@ -72,16 +91,29 @@
     color: var(--text);
     border: 1px solid var(--border);
     border-radius: 10px;
-    padding: 14px 16px;
+    padding: 15px 16px;
     margin-bottom: 10px;
     font-size: 15px;
     cursor: pointer;
-    transition: border-color .15s, background .15s;
+    transition: border-color .15s, background .15s, transform .1s;
   }
-  .choice:hover, .choice:active {
-    border-color: var(--accent);
-    background: #232838;
+  .choice:hover { border-color: var(--accent); background: #232838; }
+  .choice:active { transform: scale(0.99); }
+  .type-icons {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 22px;
   }
+  .type-icons span {
+    display: block;
+    height: 36px;
+    border-radius: 8px;
+  }
+  .type-icons span:nth-child(1) { background: var(--t1); }
+  .type-icons span:nth-child(2) { background: var(--t2); }
+  .type-icons span:nth-child(3) { background: var(--t3); }
+  .type-icons span:nth-child(4) { background: var(--t4); }
   .intro p {
     color: var(--text-dim);
     font-size: 14px;
@@ -95,7 +127,7 @@
     color: var(--accent-text);
     border: none;
     border-radius: 10px;
-    padding: 15px;
+    padding: 16px;
     font-size: 16px;
     font-weight: 700;
     cursor: pointer;
@@ -104,12 +136,14 @@
     font-size: 12px;
     color: var(--text-dim);
     letter-spacing: 0.1em;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
   }
   .result-title {
-    font-size: 22px;
+    font-size: 24px;
     font-weight: 700;
-    margin: 0 0 16px;
+    margin: 0 0 18px;
+    padding-bottom: 16px;
+    border-bottom: 3px solid var(--type-color, var(--accent));
   }
   .result-body p {
     font-size: 15px;
@@ -117,10 +151,10 @@
   }
   .action-box {
     background: #1f2330;
-    border-left: 3px solid var(--accent);
+    border-left: 3px solid var(--type-color, var(--accent));
     border-radius: 4px;
-    padding: 12px 14px;
-    margin: 0 0 22px;
+    padding: 14px 16px;
+    margin: 0 0 24px;
     font-size: 14px;
   }
   .action-box .label {
@@ -133,11 +167,11 @@
     display: block;
     width: 100%;
     text-align: center;
-    background: var(--accent);
+    background: var(--type-color, var(--accent));
     color: var(--accent-text);
     border: none;
     border-radius: 10px;
-    padding: 16px;
+    padding: 17px;
     font-size: 16px;
     font-weight: 700;
     text-decoration: none;
@@ -147,7 +181,7 @@
     display: block;
     font-size: 12px;
     font-weight: 400;
-    margin-top: 2px;
+    margin-top: 3px;
     opacity: .85;
   }
   .cta-secondary {
@@ -163,6 +197,7 @@
     text-decoration: none;
     margin-bottom: 6px;
   }
+  .cta-secondary:hover { border-color: var(--text-dim); }
   .restart {
     text-align: center;
     margin-top: 18px;
@@ -172,37 +207,44 @@
     font-size: 13px;
     text-decoration: underline;
   }
+  footer.brand {
+    text-align: center;
+    margin-top: 24px;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
   .hidden { display: none; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header class="top">
-    <div class="eyebrow">AIの最前線</div>
-    <h1>AI時代の対応力診断</h1>
-  </header>
+  <div class="hero"><img src="/og-image.png" alt="AI時代の対応力診断" width="1200" height="630"></div>
 
   <div id="screen-intro" class="card intro">
+    <div class="type-icons"><span></span><span></span><span></span><span></span></div>
     <p>2つの質問に答えるだけで、AI時代における今のあなたのタイプと、今週からできる具体的な一歩がわかります。</p>
     <button class="start-btn" onclick="goTo('q1')">診断をはじめる</button>
   </div>
 
   <div id="screen-q1" class="card hidden">
-    <div class="progress">質問 1 / 2</div>
+    <div class="progress-track"><div class="progress-fill" style="width:0%"></div></div>
+    <div class="progress-label">質問 1 / 2</div>
     <p class="question">この1週間で、AIに関するニュースや話題を目にした回数は?</p>
     <button class="choice" onclick="answerQ1('A')">3回以上あり、内容も覚えている</button>
     <button class="choice" onclick="answerQ1('B')">1〜2回程度、内容はあまり覚えていない</button>
   </div>
 
   <div id="screen-q2" class="card hidden">
-    <div class="progress">質問 2 / 2</div>
+    <div class="progress-track"><div class="progress-fill" style="width:50%"></div></div>
+    <div class="progress-label">質問 2 / 2</div>
     <p class="question">AIツールを、実際に自分で触ってみたことは?</p>
     <button class="choice" onclick="showResult('type1')">ある(使ってみた・試したことがある)</button>
     <button class="choice" onclick="showResult('type2')">まだない(情報を見ているだけ)</button>
   </div>
 
   <div id="screen-q3" class="card hidden">
-    <div class="progress">質問 2 / 2</div>
+    <div class="progress-track"><div class="progress-fill" style="width:50%"></div></div>
+    <div class="progress-label">質問 2 / 2</div>
     <p class="question">AIの話題を見聞きしたとき、正直な気持ちに近いのは?</p>
     <button class="choice" onclick="showResult('type3')">このままで大丈夫か、少し気になる</button>
     <button class="choice" onclick="showResult('type4')">特に気にならない、自分にはまだ関係ない気がする</button>
@@ -223,27 +265,33 @@
     <a id="cta-share" class="cta-secondary" href="#" target="_blank" rel="noopener">この結果をXでシェアする</a>
     <div class="restart"><a href="#" onclick="location.reload(); return false;">もう一度診断する</a></div>
   </div>
+
+  <footer class="brand">AIの最前線</footer>
 </div>
 
 <script>
   const RESULTS = {
     type1: {
       title: "準備万端タイプ",
+      color: "var(--t1)",
       body: "<p>あなたは、AIの情報を集めるだけでなく、実際に手を動かして試している数少ないタイプです。多くの人が「情報を集めるだけ」で止まる中、あなたはすでに一歩先にいます。</p>",
       action: "今使っているAIツールで、まだ試していない機能を1つだけ触ってみてください。それだけで、来週の自分が少し変わります。"
     },
     type2: {
       title: "知識先行・実践不足タイプ",
+      color: "var(--t2)",
       body: "<p>情報はしっかり集められていて、知識量としてはすでに十分です。足りないのは知識ではなく、ほんの小さな「試す」の一歩だけです。</p>",
       action: "知っているAIツールを1つだけ開いて、何か1つ入力してみてください。完璧である必要はありません。「触った」という事実が、来週のあなたを変えます。"
     },
     type3: {
       title: "情報不足・不安先行タイプ",
+      color: "var(--t3)",
       body: "<p>「追いつけていない」という感覚、実は多くの人が同じように感じています。あなただけが遅れているわけではありません。不安の正体の多くは、単に情報との接触量が少ないことです。</p>",
       action: "信頼できる情報源を1つだけ決めて、フォローしてみてください。何十個も追う必要はありません。1つで十分です。"
     },
     type4: {
       title: "楽観マイペースタイプ",
+      color: "var(--t4)",
       body: "<p>AIの変化に対して、今のところ大きな不安を感じていないあなたは、目の前のことに集中できている強さを持っています。焦って情報を詰め込む必要はありません。</p>",
       action: "自分の仕事や興味のある分野で、AIが話題になっているニュースを1つだけ探してみてください。それだけで十分な一歩です。"
     }
@@ -261,6 +309,8 @@
 
   function showResult(typeKey) {
     const r = RESULTS[typeKey];
+    const resultCard = document.getElementById('screen-result');
+    resultCard.style.setProperty('--type-color', r.color);
     document.getElementById('result-title').textContent = r.title;
     document.getElementById('result-body').innerHTML = r.body;
     document.getElementById('result-action').textContent = r.action;
