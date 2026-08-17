@@ -274,6 +274,31 @@
   // ページ内で完結する診断なので、読み込み時に一度だけ拾って結果送信時に一緒に送る。
   const gclid = new URLSearchParams(window.location.search).get('gclid') || '';
 
+  // 結果画面から外に出ていく導線(note購入ページ / Xシェア)を押したかどうかを計測する。
+  // 「診断は終わったのに買われていない」が、note記事に着いていないのか、
+  // 着いた上で980円で離脱しているのか、これが無いと切り分けられない。
+  let resultType = null;
+  const trackedClicks = new Set();
+
+  function trackClick(target) {
+    // 1回の診断につき1件まで。連打で遷移率が100%を超えると指標として読めなくなる。
+    if (trackedClicks.has(target)) return;
+    trackedClicks.add(target);
+
+    const payload = JSON.stringify({ target, type: resultType, gclid });
+    // 別タブで開くのでページは残るが、遷移直前でも確実に届くよう sendBeacon を優先する。
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon('/api/click', new Blob([payload], { type: 'application/json' }));
+      return;
+    }
+    fetch('/api/click', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: payload,
+      keepalive: true
+    }).catch(() => {});
+  }
+
   const RESULTS = {
     type1: {
       title: "準備万端タイプ",
@@ -312,6 +337,8 @@
   }
 
   function showResult(typeKey) {
+    resultType = typeKey;
+
     // 計測が失敗しても診断表示は絶対に止めたくないので、結果への影響を一切与えない形で送る。
     fetch('/api/complete', {
       method: 'POST',
@@ -335,6 +362,9 @@
 
     goTo('result');
   }
+
+  document.getElementById('cta-buy').addEventListener('click', function () { trackClick('note'); });
+  document.getElementById('cta-share').addEventListener('click', function () { trackClick('share'); });
 </script>
 </body>
 </html>
