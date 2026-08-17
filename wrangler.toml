@@ -1,6 +1,12 @@
 name = "ai-saizensen"
 compatibility_date = "2026-08-14"
+main = "worker.js"
 
 [assets]
-directory = "."
+directory = "public"
+binding = "ASSETS"
 not_found_handling = "404-page"
+
+[[kv_namespaces]]
+binding = "STATS"
+id = "34cf0f3ac8cd433682bd59d2635cfc0a"

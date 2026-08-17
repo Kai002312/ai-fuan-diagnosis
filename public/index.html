@@ -270,6 +270,10 @@
 </div>
 
 <script>
+  // Google広告のクリック経由だと、URLに ?gclid=... が自動で付く(オークションタグ設定)。
+  // ページ内で完結する診断なので、読み込み時に一度だけ拾って結果送信時に一緒に送る。
+  const gclid = new URLSearchParams(window.location.search).get('gclid') || '';
+
   const RESULTS = {
     type1: {
       title: "準備万端タイプ",
@@ -308,6 +312,13 @@
   }
 
   function showResult(typeKey) {
+    // 計測が失敗しても診断表示は絶対に止めたくないので、結果への影響を一切与えない形で送る。
+    fetch('/api/complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: typeKey, gclid })
+    }).catch(() => {});
+
     const r = RESULTS[typeKey];
     const resultCard = document.getElementById('screen-result');
     resultCard.style.setProperty('--type-color', r.color);
