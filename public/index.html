@@ -223,7 +223,7 @@
   <div id="screen-intro" class="card intro">
     <div class="type-icons"><span></span><span></span><span></span><span></span></div>
     <p>2つの質問に答えるだけで、AI時代における今のあなたのタイプと、今週からできる具体的な一歩がわかります。</p>
-    <button class="start-btn" onclick="goTo('q1')">診断をはじめる</button>
+    <button class="start-btn" onclick="startDiagnosis()">診断をはじめる</button>
   </div>
 
   <div id="screen-q1" class="card hidden">
@@ -272,7 +272,41 @@
 <script>
   // Google広告のクリック経由だと、URLに ?gclid=... が自動で付く(オークションタグ設定)。
   // ページ内で完結する診断なので、読み込み時に一度だけ拾って結果送信時に一緒に送る。
-  const gclid = new URLSearchParams(window.location.search).get('gclid') || '';
+  const params = new URLSearchParams(window.location.search);
+  const gclid = params.get('gclid') || '';
+  // 広告以外(X・note等)からの流入と混ざると、完了が出ても由来が分からなくなる。
+  // gclid が無いときだけ見る。判定の本体はWorker側(resolveSource)に置いてある。
+  const utmSource = params.get('utm_source') || '';
+
+  // ファネルの分母。これが無いと「完了0件」が【クリックが着地していない】のか
+  // 【着地したが離脱した】のか切り分けられない。
+  // 1セッション1回だけ送る。再読み込みで分母だけ膨らむと率が読めなくなるため。
+  function track(step) {
+    try {
+      const flag = 'aifuan_' + step;
+      if (sessionStorage.getItem(flag)) return;
+      sessionStorage.setItem(flag, '1');
+    } catch (e) {
+      // プライベートブラウジング等で sessionStorage が使えないことがある。
+      // その場合は重複排除を諦めて送る(送らないより、多めに数えるほうがまし)。
+    }
+    // 計測が失敗しても診断は絶対に止めない。例外も戻り値も無視する。
+    fetch('/api/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ step: step, gclid: gclid, source: utmSource }),
+      keepalive: true
+    }).catch(() => {});
+  }
+
+  track('visit');
+
+  // 「診断をはじめる」で1段。ここが訪問と完了の間に入ることで、
+  // 離脱がヒーロー(読む前)なのか設問(読んだ後)なのかが分かれる。
+  function startDiagnosis() {
+    track('start');
+    goTo('q1');
+  }
 
   // 結果画面から外に出ていく導線(note購入ページ / Xシェア)を押したかどうかを計測する。
   // 「診断は終わったのに買われていない」が、note記事に着いていないのか、
@@ -285,7 +319,7 @@
     if (trackedClicks.has(target)) return;
     trackedClicks.add(target);
 
-    const payload = JSON.stringify({ target, type: resultType, gclid });
+    const payload = JSON.stringify({ target, type: resultType, gclid, source: utmSource });
     // 別タブで開くのでページは残るが、遷移直前でも確実に届くよう sendBeacon を優先する。
     if (navigator.sendBeacon) {
       navigator.sendBeacon('/api/click', new Blob([payload], { type: 'application/json' }));
@@ -343,7 +377,7 @@
     fetch('/api/complete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: typeKey, gclid })
+      body: JSON.stringify({ type: typeKey, gclid, source: utmSource })
     }).catch(() => {});
 
     const r = RESULTS[typeKey];
