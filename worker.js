@@ -13,8 +13,10 @@ const TYPE_LABELS = {
 // 結果画面から外に出ていく導線。noteが購入ページ、shareがXシェア。
 const CLICK_TARGETS = ["note", "share"];
 
-// ファネルの上段。`complete`/`click` は元から別の受け口があるので、ここは訪問と開始だけ。
-const TRACK_STEPS = ["visit", "start"];
+// ファネルのうち、この受け口が担当する段。`complete`/`click` は元から別の受け口がある。
+// q1   = 設問1に回答した(「はじめる」だけ押して帰った人と分けるため)
+// read = 結果画面のnote導線が実際に画面に入った(CTAを見た上で買わなかった人と分けるため)
+const TRACK_STEPS = ["visit", "start", "q1", "read"];
 
 /** 流入元が分からない訪問(直接・検索・リンク元不明)をまとめる先。 */
 const DIRECT_SOURCE = "direct";
@@ -240,8 +242,12 @@ async function handleStats(request, env) {
     visitAds,
     startTotal,
     startAds,
+    q1Total,
+    q1Ads,
     completeTotal,
     completeAds,
+    readTotal,
+    readAds,
     noteClicks,
     noteClicksAds,
     shareClicks,
@@ -254,8 +260,12 @@ async function handleStats(request, env) {
     env.STATS.get("visit:from_google_ads"),
     env.STATS.get("start:total"),
     env.STATS.get("start:from_google_ads"),
+    env.STATS.get("q1:total"),
+    env.STATS.get("q1:from_google_ads"),
     env.STATS.get("complete:total"),
     env.STATS.get("complete:from_google_ads"),
+    env.STATS.get("read:total"),
+    env.STATS.get("read:from_google_ads"),
     env.STATS.get("click:note:total"),
     env.STATS.get("click:note:from_google_ads"),
     env.STATS.get("click:share:total"),
@@ -269,11 +279,15 @@ async function handleStats(request, env) {
 
   const visited = num(visitTotal);
   const started = num(startTotal);
+  const answeredQ1 = num(q1Total);
   const completed = num(completeTotal);
+  const readCta = num(readTotal);
   const noteClicked = num(noteClicks);
   const visitedAds = num(visitAds);
   const startedAds = num(startAds);
+  const answeredQ1Ads = num(q1Ads);
   const completedAds = num(completeAds);
+  const readCtaAds = num(readAds);
   const noteClickedAds = num(noteClicksAds);
 
   const srcRows = sources.length
@@ -346,8 +360,10 @@ async function handleStats(request, env) {
 <ul class="funnel">
   <li><span>ページに来た</span><span><span class="n">${visited}</span><span class="r">うちGoogle広告経由 ${visitedAds}</span></span></li>
   <li><span>診断をはじめた</span><span><span class="n">${started}</span><span class="r">訪問の ${rate(started, visited)} / うち広告経由 ${startedAds}</span></span></li>
-  <li><span>診断を完了した</span><span><span class="n">${completed}</span><span class="r">開始の ${rate(completed, started)} / うち広告経由 ${completedAds}</span></span></li>
-  <li><span>note記事(980円)へ遷移した</span><span><span class="n">${noteClicked}</span><span class="r">完了の ${rate(noteClicked, completed)} / うち広告経由 ${noteClickedAds}</span></span></li>
+  <li><span>設問1に回答した</span><span><span class="n">${answeredQ1}</span><span class="r">開始の ${rate(answeredQ1, started)} / うち広告経由 ${answeredQ1Ads}</span></span></li>
+  <li><span>診断を完了した</span><span><span class="n">${completed}</span><span class="r">設問1回答の ${rate(completed, answeredQ1)} / うち広告経由 ${completedAds}</span></span></li>
+  <li><span>note導線(CTA)を見た</span><span><span class="n">${readCta}</span><span class="r">完了の ${rate(readCta, completed)} / うち広告経由 ${readCtaAds}</span></span></li>
+  <li><span>note記事(980円)へ遷移した</span><span><span class="n">${noteClicked}</span><span class="r">CTA到達の ${rate(noteClicked, readCta)} / うち広告経由 ${noteClickedAds}</span></span></li>
   <li><span>購入した</span><span><span class="n" style="color:#bbb">-</span><span class="r">noteに自動取得の手段がないため手元で確認</span></span></li>
   <li><span>Xでシェアした</span><span><span class="n">${num(shareClicks)}</span><span class="r">完了の ${rate(num(shareClicks), completed)}</span></span></li>
 </ul>
@@ -373,7 +389,9 @@ async function handleStats(request, env) {
 <p class="note">
 日別の数値は2026-08-17の計測方式変更(1日1キーのJSON化・日付の区切りをJSTに統一)以降のぶんです。累計の完了数はそれ以前から引き継いでいます。<br>
 <strong>訪問・開始の計測は2026-08-18に追加したものです。それ以前の完了数には対応する訪問数がないため、初日は完了率が100%を超えて見えることがあります。</strong><br>
-訪問・開始は1セッションにつき1回だけ数えます(同じ人の再読み込みで分母が膨らまないようにするため)。note遷移も1回の診断につき最大1件までです。<br>
+訪問・開始・設問1・CTA到達・完了は1セッションにつき1回だけ数えます(同じ人の再読み込みや「もう一度診断する」で数字が膨らまないようにするため)。note遷移も1回の診断につき最大1件までです。<br>
+<strong>「設問1に回答した」「note導線(CTA)を見た」は2026-08-18に追加した段です。</strong>それ以前の完了・note遷移には対応する数字がないため、当面この2段の率は低く出ます。CTA到達は導線が画面内に1秒以上入った場合に数えるので、画面の大きい端末では完了とほぼ同数になることがあります。<br>
+日別・流入元別のJSONにも <code>q1</code> / <code>read</code> を記録していますが、表が横に伸びすぎるため画面には出していません(必要なら <code>day:</code>/<code>src:</code> のキーを直接読んでください)。<br>
 流入元は gclid が付いていれば Google広告、次に <code>utm_source</code>、どちらも無ければ「直接・不明」として記録します。
 </p>
 </body></html>`;
