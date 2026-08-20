@@ -11,6 +11,14 @@
 <meta property="og:image" content="https://ai-saizensen.kkimura-174.workers.dev/og-image.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230f1117'/%3E%3Crect x='18' y='18' width='28' height='28' rx='6' fill='%236ea8fe'/%3E%3Crect x='54' y='18' width='28' height='28' rx='6' fill='%235eead4'/%3E%3Crect x='18' y='54' width='28' height='28' rx='6' fill='%23fbbf77'/%3E%3Crect x='54' y='54' width='28' height='28' rx='6' fill='%2386efac'/%3E%3C/svg%3E">
+<!-- SmartNews Ads Pixel(ai-fuan-shindan)。訪問=PageView はここで送る。
+     以降の段(開始・設問1・完了・CTA到達・note遷移)は下のスクリプトから送っている。
+     読み込みに失敗しても診断は動く(すべて try で囲ってある)。 -->
+<script type="text/javascript">
+!function(){if(window.SmartnewsAds=window.SmartnewsAds||{},!window.SmartnewsAds.p){var e=window.SmartnewsAds.p=function(){e.callMethod?e.callMethod.apply(e,arguments):e.queue.push(arguments)};e.push=e,e.version="1.0.1",e.queue=[];var n=document.createElement("script");n.async=!0,n.src="//cdn.smartnews-ads.com/i/pixel.js";var s=document.getElementsByTagName("script")[0];s.parentNode.insertBefore(n,s)}}();
+SmartnewsAds.p("243f7dadd62dcb9d80a27e1c", "PageView");
+</script>
+<noscript><img height="1" width="1" style="display:none;" alt="" src="https://i.smartnews-ads.com/p?id=243f7dadd62dcb9d80a27e1c&e=PageView" /></noscript>
 <style>
   :root {
     --bg: #0f1117;
@@ -294,8 +302,40 @@
     return true;
   }
 
+  // SmartNews広告のPixel。自前のKV計測と【同じ地点・同じ重複排除】で送る。
+  // 別々に書くと数字が食い違い、どちらが正しいのか判断できなくなるため、
+  // track()/trackClick()/完了処理の中から呼ぶ形にしてある。
+  const SN_PIXEL_ID = '243f7dadd62dcb9d80a27e1c';
+
+  // 自前のファネル段 → SmartNewsの標準イベント名。
+  // 【重要】キャンペーンの「最適化ポイント」に選べるのは
+  // ViewContent / AddToCart / Purchase / CompleteRegistration / Subscribe の5種だけで、
+  // しかも配信開始後に変更できない。診断の成果は complete なので
+  // CompleteRegistration を当てている。ここを変えるとキャンペーンを作り直しになる。
+  // note購入ページ(note.com)にはPixelを置けないので、測れる最深部は note への遷移まで。
+  const SN_EVENTS = {
+    start: 'ViewContent',
+    q1: 'SubmitForm',
+    complete: 'CompleteRegistration',
+    read: 'TimeSpent',
+    note: 'InitiateCheckout',
+    share: 'Share'
+  };
+
+  function sn(step) {
+    const name = SN_EVENTS[step];
+    if (!name) return;
+    // Pixelが読み込めていなくても診断は絶対に止めない。
+    try {
+      if (window.SmartnewsAds && window.SmartnewsAds.p) {
+        window.SmartnewsAds.p(SN_PIXEL_ID, name);
+      }
+    } catch (e) {}
+  }
+
   function track(step) {
     if (!sessionOnce(step)) return;
+    sn(step);
     // 計測が失敗しても診断は絶対に止めない。例外も戻り値も無視する。
     fetch('/api/track', {
       method: 'POST',
@@ -324,6 +364,7 @@
     // 1回の診断につき1件まで。連打で遷移率が100%を超えると指標として読めなくなる。
     if (trackedClicks.has(target)) return;
     trackedClicks.add(target);
+    sn(target);
 
     const payload = JSON.stringify({ target, type: resultType, gclid, source: utmSource });
     // 別タブで開くのでページは残るが、遷移直前でも確実に届くよう sendBeacon を優先する。
@@ -411,6 +452,7 @@
     // 「もう一度診断する」は location.reload() なので sessionStorage が残る。
     // 重複排除をしないと訪問が増えないまま完了だけ増え、完了率が100%を超える。
     if (sessionOnce('complete')) {
+      sn('complete');
       fetch('/api/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
