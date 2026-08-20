@@ -48,13 +48,63 @@ SmartnewsAds.p("243f7dadd62dcb9d80a27e1c", "PageView");
     padding: 0 20px 60px;
     min-height: 100vh;
   }
+  /* 見出しは画像ではなくテキストで持つ。
+     以前は og-image.png(259KB / 実測1.9秒)の中に見出しが焼き込まれていた。
+     HTML自体は0.29秒で届いているのに、意味が伝わるまで1.9秒待たせていた。
+     SmartNewsはアプリ内ブラウザ・モバイル回線で、8割が1画面も動かさず帰る。
+     そこに1.9秒の空白は直撃するので、同じ見た目をCSSで再現して画像を外した。
+     横長1200x630をスマホ幅に縮めると文字が小さくなる問題も同時に消える。
+     og-image.png はOGP(Xシェア時のカード)用に残してある。 */
   .hero {
-    margin: 0 -20px 28px;
-    overflow: hidden;
+    margin: 0 -20px 26px;
+    padding: 32px 20px 28px;
+    background: linear-gradient(115deg, #0f1117 0%, #151926 55%, #1c2233 100%);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
   }
-  .hero img {
-    width: 100%;
+  /* flexの子は min-width:auto が既定で、中身より小さくならない。
+     eyebrowの実効幅は約242pxあり、375px端末ではマークと余白を引いた残りとほぼ同じ。
+     min-width:0 を入れないと、縮まずに横スクロールが出る。 */
+  .hero-text {
+    min-width: 0;
+  }
+  .hero .eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    color: var(--text-dim);
+    margin: 0 0 12px;
+    /* 収まらないときは折り返す(横に溢れさせない) */
+    overflow-wrap: anywhere;
+  }
+  .hero h1 {
+    /* 狭い画面でも折り返しに頼らず収まるように可変にする */
+    font-size: clamp(22px, 6.4vw, 30px);
+    line-height: 1.35;
+    font-weight: 700;
+    margin: 0;
+  }
+  /* 元の画像にあった2x2のマーク。装飾なので読み上げからは外す。 */
+  .hero-mark {
+    display: grid;
+    grid-template-columns: repeat(2, 34px);
+    grid-auto-rows: 34px;
+    gap: 7px;
+    flex: none;
+  }
+  .hero-mark span {
     display: block;
+    border-radius: 8px;
+  }
+  .hero-mark span:nth-child(1) { background: #414759; }
+  .hero-mark span:nth-child(2) { background: #6c7486; }
+  .hero-mark span:nth-child(3) { background: #2c3242; }
+  .hero-mark span:nth-child(4) { background: #98a1b2; }
+  @media (max-width: 360px) {
+    /* これ以上狭いと見出しとマークが競合するので、マークを畳んで見出しを優先する */
+    .hero-mark { display: none; }
   }
   .card {
     background: var(--card);
@@ -226,7 +276,13 @@ SmartnewsAds.p("243f7dadd62dcb9d80a27e1c", "PageView");
 </head>
 <body>
 <div class="wrap">
-  <div class="hero"><img src="/og-image.png" alt="AI時代の対応力診断" width="1200" height="630"></div>
+  <div class="hero">
+    <div class="hero-text">
+      <p class="eyebrow">AI TIMES ADAPTABILITY DIAGNOSIS</p>
+      <h1>AI時代の<br>対応力診断</h1>
+    </div>
+    <div class="hero-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+  </div>
 
   <div id="screen-intro" class="card intro">
     <div class="type-icons"><span></span><span></span><span></span><span></span></div>
