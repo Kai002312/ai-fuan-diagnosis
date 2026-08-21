@@ -437,7 +437,11 @@ SmartnewsAds.p("243f7dadd62dcb9d80a27e1c", "PageView");
 
     function tick() {
       var now = Date.now();
-      if (document.visibilityState === 'visible') visibleMs += now - last;
+      // 「hidden でなければ数える」にしている。'visible' と一致するかで判定すると、
+      // visibilityState を返さない環境(古いアプリ内ブラウザ等)で常に false になり、
+      // 滞在が永久に0のまま = 計測が丸ごと死ぬ。
+      // 取れないときは数える側に倒す(取りこぼすより、多めに数えるほうがまし)。
+      if (document.visibilityState !== 'hidden') visibleMs += now - last;
       last = now;
       while (next < marks.length && visibleMs >= marks[next][0]) {
         track(marks[next][1]);
