@@ -190,6 +190,20 @@ SmartnewsAds.p("243f7dadd62dcb9d80a27e1c", "PageView");
     font-weight: 700;
     cursor: pointer;
   }
+  /* 押す前の不安を消すための一行。診断系でいちばん警戒されるのは
+     「結果を見るのにメールアドレスを登録させられる」型なので、そこを名指しで否定する。
+     ボタンの下に置いているのは、押す直前に目に入る位置だから。 */
+  .assure {
+    margin: 12px 0 0;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--text-dim);
+    text-align: center;
+  }
+  .assure b {
+    color: var(--text);
+    font-weight: 700;
+  }
   .result-label {
     font-size: 12px;
     color: var(--text-dim);
@@ -288,6 +302,10 @@ SmartnewsAds.p("243f7dadd62dcb9d80a27e1c", "PageView");
     <div class="type-icons"><span></span><span></span><span></span><span></span></div>
     <p>2つの質問に答えるだけで、AI時代における今のあなたのタイプと、今週からできる具体的な一歩がわかります。</p>
     <button class="start-btn" onclick="startDiagnosis()">診断をはじめる</button>
+    <p class="assure">
+      <b>無料</b>・<b>登録不要</b>・約30秒<br>
+      メールアドレスや個人情報の入力はありません。結果はその場で表示されます。
+    </p>
   </div>
 
   <div id="screen-q1" class="card hidden">
@@ -404,6 +422,31 @@ SmartnewsAds.p("243f7dadd62dcb9d80a27e1c", "PageView");
   }
 
   track('visit');
+
+  // 滞在時間。訪問(分母)と開始(分子)の間が極端に空いたとき、
+  // 【そもそも見ていない】のか【見た上で断った】のかを分けるために置いている。
+  // この2つで取るべき手が正反対になる(媒体を疑うか、オファーを直すか)。
+  //
+  // 経過時間ではなく「画面が見えていた通算時間」で測る。
+  // タブを開いたまま放置されたものを「読んだ」と数えると、判定が甘くなるため。
+  (function measureDwell() {
+    var marks = [[3000, 'dwell3'], [10000, 'dwell10']];
+    var visibleMs = 0;
+    var last = Date.now();
+    var next = 0;
+
+    function tick() {
+      var now = Date.now();
+      if (document.visibilityState === 'visible') visibleMs += now - last;
+      last = now;
+      while (next < marks.length && visibleMs >= marks[next][0]) {
+        track(marks[next][1]);
+        next++;
+      }
+      if (next < marks.length) setTimeout(tick, 500);
+    }
+    setTimeout(tick, 500);
+  })();
 
   // 「診断をはじめる」で1段。ここが訪問と完了の間に入ることで、
   // 離脱がヒーロー(読む前)なのか設問(読んだ後)なのかが分かれる。
